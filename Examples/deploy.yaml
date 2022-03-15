@@ -1,0 +1,36 @@
+#Create a GCP serviceaccount with required permissions and implement GKE workload binding
+#Refer to https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: gcp-secret-reader
+  annotations:
+    iam.gke.io/gcp-service-account: gcp-secret-reader@sandbox.iam.gserviceaccount.com
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: gcp-secret-reader
+  name: gcp-secret-reader
+spec:
+  serviceAccount: gcp-secret-reader
+  containers:
+  - image: gcp-secret-reader:latest
+    name: gcp-secret-reader
+    env:
+      - name: PROJECT_ID
+        value: sandbox
+      - name: GCP_SECRET_NAME
+        value: demo-app-vault-token
+      - name: SECRET_MOUNT_LOCATION
+        value: /run/secrets/credentials
+    securityContext:
+      runAsUser: 1337 #https://github.com/istio/istio/issues/23802#issuecomment-628035658
+    volumeMounts:
+      - name: secret-mount
+        mountPath: /run/secrets
+  volumes:
+    - name: secret-mount
+      emptyDir: {}
